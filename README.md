@@ -1,4 +1,4 @@
-Go package to provide merkle tree functionality
+Go package to provide merkle tree functionality (in-progress)
 
 - hash inputs
 - create merkle trees 
