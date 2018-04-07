@@ -1,60 +1,44 @@
 package merkle
 
 import (
-	"fmt"
+	"crypto/sha256"
+	"encoding/json"
 	"testing"
 )
 
-// TestMerkleTree ... help
-func TestMerkleTree(t *testing.T) {
-	var (
-		dataBlock1 = "A"
-		dataBlock2 = "B"
-		dataBlock3 = "C"
-		dataBlock4 = "D"
-		dataBlock5 = "E"
-		dataBlock6 = "F"
-		// dataBlock7 = "G"
-		// dataBlock8 = "H"
-	)
-
-	// Create leaf nodes
-	leafNode1, err := NewLeaf([]byte(dataBlock1))
-	if err != nil {
-		t.Error(err)
-	}
-
-	leafNode2, err := NewLeaf([]byte(dataBlock2))
-	leafNode3, err := NewLeaf([]byte(dataBlock3))
-	leafNode4, err := NewLeaf([]byte(dataBlock4))
-	leafNode5, err := NewLeaf([]byte(dataBlock5))
-	leafNode6, err := NewLeaf([]byte(dataBlock6))
-	// leafNode7, err := NewLeaf([]byte(dataBlock7))
-	// leafNode8, err := NewLeaf([]byte(dataBlock8))
-
-	// Build the merkle tree
-	rootNode := BuildTree(leafNode1, leafNode2, leafNode3, leafNode4, leafNode5, leafNode6)
-
-	fmt.Println("----------------")
-	printTree(rootNode)
-
+// cert implements the Content interface provided by merkle and represents the content to bestored in the tree.
+type cert struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Test string `json:"test"`
 }
 
-// printTree ... depth first traversal print of merkle tree
-func printTree(n *Node) string {
-	if n.IsLeaf() {
-		fmt.Println(n.data)
-		return n.data
+// create json string from the certs data
+func (c cert) Data() []byte {
+	b, _ := json.Marshal(c)
+	return b
+}
+
+//CalculateHash hashes the value of a cert
+func (c cert) CalculateHash() []byte {
+	hashable := c.Data()
+	h := sha256.New()
+	h.Write(hashable)
+	return h.Sum(nil)
+}
+
+var certs = []Content{
+	cert{ID: "A", Name: "Reece", Test: "1"},
+	cert{ID: "B", Name: "Kara", Test: "2"},
+	cert{ID: "C", Name: "Maxx", Test: "3"},
+	cert{ID: "D", Name: "Conor", Test: "4"},
+}
+
+func TestNewTree(t *testing.T) {
+	tree, err := newTree(certs)
+	if err != nil {
+		t.Error("error: unexpected error:  ", err)
 	}
 
-	if n.Left != nil {
-		fmt.Println(n.data)
-		printTree(n.Left)
-	}
-
-	if n.Right != nil {
-		fmt.Println(n.data)
-		printTree(n.Right)
-	}
-	return "test"
+	printTree(tree.Root, false)
 }

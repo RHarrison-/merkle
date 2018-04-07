@@ -2,80 +2,116 @@ package merkle
 
 import (
 	"crypto/sha256"
-	"io"
+	"encoding/hex"
+	"errors"
 )
 
-// Node is the basic unit of the merkle tree
+//Content represents the data that is stored and verified by the tree.
+//A type that implements this interface can be used as an item in the tree.
+type Content interface {
+	CalculateHash() []byte
+	Data() []byte
+}
+
+//MerkleTree is the container for the tree. It holds a pointer to the root of the tree,.
+type MerkleTree struct {
+	Root       *Node   // pointer too root node
+	merkleRoot []byte  //
+	Leafs      []*Node // pointer too leaf nodes
+}
+
+//Node represents a node, root, or leaf in the tree.
 type Node struct {
-	Parent, Left, Right *Node  // parent
-	checksum            []byte // hashed data
-	data                string // raw data (for testing)
+	Parent *Node   // parent pointer
+	Left   *Node   // left child pointer
+	Right  *Node   // right child pointer
+	isLeaf bool    // ifs node a leaf
+	dup    bool    // is node a duplicate
+	Hash   []byte  // hash of node content
+	C      Content // content of node
+	Hex    string  // Hexidecimal representation of content hash
+	data   []byte  // raw data before hash (useful for debug)
 }
 
-// IsLeaf returns true if this is a leaf node (has no children)
-func (n Node) IsLeaf() bool {
-	return n.Left == nil && n.Right == nil
-}
-
-// NewLeaf returns a new node from using the input data block
-func NewLeaf(b []byte) (*Node, error) {
-	n := new(Node)
-	h := sha256.New()
-	n.data = string(b)
-
-	if _, err := io.WriteString(h, string(b)); err != nil {
-		return nil, err
+// create a new merkle tree and return the root node, merkleroot and leaf nodes.
+func newTree(cs []Content) (*MerkleTree, error) {
+	if len(cs) == 0 {
+		return nil, errors.New("error: cannot construct tree with no content")
 	}
 
-	n.checksum = h.Sum(nil)
-	return n, nil
+	var leafs []*Node
+	for _, c := range cs {
+
+		hash := c.CalculateHash()
+
+		// create array of leaves
+		leafs = append(leafs, &Node{
+			Hash:   hash,
+			Hex:    hex.EncodeToString(hash),
+			C:      c,
+			isLeaf: true,
+			data:   c.Data(),
+		})
+	}
+
+	// if un-even leaf amount, duplicate last leaf
+	if len(leafs)%2 == 1 {
+		duplicate := &Node{
+			Hash:   leafs[len(leafs)-1].Hash,
+			C:      leafs[len(leafs)-1].C,
+			isLeaf: true,
+			dup:    true,
+			Hex:    leafs[len(leafs)-1].Hex,
+		}
+		leafs = append(leafs, duplicate)
+	}
+
+	root := constructTree(leafs)
+
+	t := &MerkleTree{
+		Root:       root,
+		merkleRoot: root.Hash,
+		Leafs:      leafs,
+	}
+
+	return t, nil
 }
 
-// BuildTree builds a tree from leaf nodes and returns a root node
-func BuildTree(theNodes ...*Node) *Node {
-	var nodes []*Node
+//buildIntermediate is a helper function that for a given list of leaf nodes, constructs
+//the intermediate and root levels of the tree. Returns the resulting root node of the tree.
+func constructTree(nodes []*Node) *Node {
+	var newNodes []*Node
 
-	for i := 0; i < len(theNodes); i = i + 2 {
-		parentNode := new(Node)
+	for i := 0; i < len(nodes); i += 2 {
+		h := sha256.New()
+		var left, right int = i, i + 1 // assign existing node to left/right child
 
-		// only one child node left
-		if i == len(theNodes)-1 {
-			// parentNode.data = theNodes[i].data + theNodes[i].data
-			parentNode.Left = theNodes[i]
-			parentNode.Right = nil
-			parentNode.Left.Parent = parentNode
-			parentNode.checksum = HashMerkleBranch(parentNode.Left.checksum, parentNode.Left.checksum)
-
-		} else {
-			// parentNode.data = theNodes[i].data + theNodes[i+1].data
-			parentNode.Left = theNodes[i] // bind tree
-			parentNode.Right = theNodes[i+1]
-			parentNode.Left.Parent = parentNode
-			parentNode.Right.Parent = parentNode
-			parentNode.checksum = HashMerkleBranch(parentNode.Right.checksum, parentNode.Left.checksum) // hash branch
+		if i+1 == len(nodes) {
+			right = i
 		}
 
-		// append to new node list
-		nodes = append(nodes, parentNode)
+		chash := append(nodes[left].Hash, nodes[right].Hash...)
+		h.Write(chash)
+		hash := h.Sum(nil)
+
+		// create new parent node and assign existing nodes as children
+		n := &Node{
+			Left:  nodes[left],
+			Right: nodes[right],
+			Hash:  hash,
+			Hex:   hex.EncodeToString(hash),
+			data:  []byte(string(nodes[left].data) + string(nodes[right].data)),
+		}
+
+		// assign new parent node to both children
+		nodes[left].Parent = n
+		nodes[right].Parent = n
+		// add new parent node to new ndoe list
+		newNodes = append(newNodes, n)
+
+		if len(nodes) == 2 {
+			return n
+		}
 	}
-
-	// root node reached
-	if len(nodes) == 1 {
-		return nodes[0]
-	}
-
-	return BuildTree(nodes...)
-}
-
-// HashMerkleBranch ... hash two merkle branches
-func HashMerkleBranch(left []byte, right []byte) []byte {
-	h := sha256.New()
-
-	if _, err := io.WriteString(h, string(left)+string(right)); err != nil {
-
-	}
-
-	// Sum appends the current hash to b and returns the resulting slice.
-	// It does not change the underlying hash state.
-	return h.Sum(nil)
+	return constructTree(newNodes)
 }
