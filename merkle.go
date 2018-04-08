@@ -31,6 +31,7 @@ type Node struct {
 	C      Content // content of node
 	Hex    string  // Hexidecimal representation of content hash
 	data   []byte  // raw data before hash (useful for debug)
+	proof  signature
 }
 
 // create a new merkle tree and return the root node, merkleroot and leaf nodes.
@@ -106,12 +107,99 @@ func constructTree(nodes []*Node) *Node {
 		// assign new parent node to both children
 		nodes[left].Parent = n
 		nodes[right].Parent = n
-		// add new parent node to new ndoe list
+		// add new parent node to new node list
 		newNodes = append(newNodes, n)
 
 		if len(nodes) == 2 {
+			n.Parent = nil
 			return n
 		}
 	}
 	return constructTree(newNodes)
+}
+
+type anchor struct {
+	SourceID string `json:"sourceId"`
+	Type     string `json:"type"`
+}
+
+type proofpath struct {
+	Right string `json:"right,omitempty"`
+	Left  string `json:"left,omitempty"`
+}
+
+type signature struct {
+	Context    []string    `json:"@context"`
+	Type       string      `json:"type"`
+	TargetHash string      `json:"targetHash"`
+	MerkleRoot string      `json:"merkleRoot"`
+	Anchors    []anchor    `json:"anchors"`
+	Proof      []proofpath `json:"proof"`
+}
+
+func (t *MerkleTree) generateProofs() {
+	for _, leaf := range t.Leafs {
+		leaf.generateProof()
+	}
+}
+
+func (n *Node) generateProof() {
+
+	var signature = signature{
+		Context: []string{"http://schema.org/", "https://w3id.org/security/v1"},
+		Type:    "MerkleProof2017",
+	}
+
+	signature.TargetHash = hex.EncodeToString(n.Hash)
+
+	root, path := buildPath(n, nil)
+
+	signature.Proof = path
+	signature.MerkleRoot = root
+
+	n.proof = signature
+}
+
+// rename plz
+func buildPath(n *Node, path []proofpath) (string, []proofpath) {
+	var hash string
+	if path == nil {
+		path = []proofpath{}
+	}
+
+	if n.Parent == nil {
+		hash = n.Hex
+		return hash, path
+	}
+
+	previous := n
+	current := n.Parent
+
+	if current.Left == previous {
+		path = append(path, proofpath{Right: current.Right.Hex})
+	} else {
+		path = append(path, proofpath{Left: current.Left.Hex})
+	}
+
+	return buildPath(n.Parent, path)
+}
+
+func verifyProof(s signature) bool {
+	var decoded []byte
+	currentHash, _ := hex.DecodeString(s.TargetHash)
+
+	for _, lr := range s.Proof {
+		h := sha256.New()
+		if len(lr.Left) > 0 {
+			decoded, _ = hex.DecodeString(lr.Left)
+			h.Write(append(decoded, currentHash...))
+		} else {
+			decoded, _ = hex.DecodeString(lr.Right)
+			h.Write(append(currentHash, decoded...))
+		}
+
+		currentHash = h.Sum(nil)
+	}
+
+	return hex.EncodeToString(currentHash) == s.MerkleRoot
 }
