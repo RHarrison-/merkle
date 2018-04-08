@@ -1,0 +1,28 @@
+{
+    "valid1": {
+        "merkleRoot": "f029b45bb1a7b1f0b970f6de35344b73cccd16177b4c037acbc2541c7fc27078",
+        "proof": [
+            {
+                "right": "11174e220fe74de907d1107e2a357e41434123f2948fc6b946fbfd7e3e3eecd1"
+            }
+        ],
+        "targetHash": "637ec732fa4b7b56f4c15a6a12680519a17a9e9eade09f5b424a48eb0e6f5ad0",
+        "type": [
+            "MerkleProof2017",
+            "Extension"
+        ]
+    },
+    "valid2": {
+        "merkleRoot": "7570ad1a939b1d733668125df3e71ebbd593358e7d851eff3fdebd487462daab",
+        "proof": [
+            {
+                "right": "62a1e26974f20cd38f1349a2c0975c98e3b7dbb821b7568f6790aae10c20032d"
+            }
+        ],
+        "targetHash": "7d5ee19584a27a9bf7d558e0128a27e18f8d11ace3c99cd72423c9db6cbc50d7",
+        "type": [
+            "MerkleProof2017",
+            "Extension"
+        ]
+    }
+}
