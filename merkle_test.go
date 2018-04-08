@@ -35,7 +35,7 @@ var certs = []Content{
 }
 
 func TestNewTree(t *testing.T) {
-	tree, err := newTree(certs)
+	tree, err := NewTree(certs)
 	if err != nil {
 		t.Error("error: unexpected error:  ", err)
 	}
@@ -43,6 +43,6 @@ func TestNewTree(t *testing.T) {
 	tree.generateProofs()
 
 	fmt.Println("--------------------------")
-	fmt.Println(verifyProof(tree.Leafs[1].proof))
+	fmt.Println(VerifyProof(tree.Leafs[1].proof))
 	fmt.Println("--------------------------")
 }

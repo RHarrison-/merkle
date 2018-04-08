@@ -31,11 +31,11 @@ type Node struct {
 	C      Content // content of node
 	Hex    string  // Hexidecimal representation of content hash
 	data   []byte  // raw data before hash (useful for debug)
-	proof  signature
+	proof  Signature
 }
 
 // create a new merkle tree and return the root node, merkleroot and leaf nodes.
-func newTree(cs []Content) (*MerkleTree, error) {
+func NewTree(cs []Content) (*MerkleTree, error) {
 	if len(cs) == 0 {
 		return nil, errors.New("error: cannot construct tree with no content")
 	}
@@ -118,23 +118,23 @@ func constructTree(nodes []*Node) *Node {
 	return constructTree(newNodes)
 }
 
-type anchor struct {
+type Anchor struct {
 	SourceID string `json:"sourceId"`
 	Type     string `json:"type"`
 }
 
-type proofpath struct {
+type Proofpath struct {
 	Right string `json:"right,omitempty"`
 	Left  string `json:"left,omitempty"`
 }
 
-type signature struct {
+type Signature struct {
 	Context    []string    `json:"@context"`
 	Type       string      `json:"type"`
 	TargetHash string      `json:"targetHash"`
 	MerkleRoot string      `json:"merkleRoot"`
-	Anchors    []anchor    `json:"anchors"`
-	Proof      []proofpath `json:"proof"`
+	Anchors    []Anchor    `json:"anchors"`
+	Proof      []Proofpath `json:"proof"`
 }
 
 func (t *MerkleTree) generateProofs() {
@@ -145,7 +145,7 @@ func (t *MerkleTree) generateProofs() {
 
 func (n *Node) generateProof() {
 
-	var signature = signature{
+	var signature = Signature{
 		Context: []string{"http://schema.org/", "https://w3id.org/security/v1"},
 		Type:    "MerkleProof2017",
 	}
@@ -161,10 +161,10 @@ func (n *Node) generateProof() {
 }
 
 // rename plz
-func buildPath(n *Node, path []proofpath) (string, []proofpath) {
+func buildPath(n *Node, path []Proofpath) (string, []Proofpath) {
 	var hash string
 	if path == nil {
-		path = []proofpath{}
+		path = []Proofpath{}
 	}
 
 	if n.Parent == nil {
@@ -176,15 +176,15 @@ func buildPath(n *Node, path []proofpath) (string, []proofpath) {
 	current := n.Parent
 
 	if current.Left == previous {
-		path = append(path, proofpath{Right: current.Right.Hex})
+		path = append(path, Proofpath{Right: current.Right.Hex})
 	} else {
-		path = append(path, proofpath{Left: current.Left.Hex})
+		path = append(path, Proofpath{Left: current.Left.Hex})
 	}
 
 	return buildPath(n.Parent, path)
 }
 
-func verifyProof(s signature) bool {
+func VerifyProof(s Signature) bool {
 	var decoded []byte
 	currentHash, _ := hex.DecodeString(s.TargetHash)
 
