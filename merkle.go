@@ -10,13 +10,12 @@ import (
 //A type that implements this interface can be used as an item in the tree.
 type Content interface {
 	CalculateHash() []byte
-	Data() []byte
 }
 
 //MerkleTree is the container for the tree. It holds a pointer to the root of the tree,.
 type MerkleTree struct {
 	Root       *Node   // pointer too root node
-	merkleRoot []byte  //
+	MerkleRoot []byte  //
 	Leafs      []*Node // pointer too leaf nodes
 }
 
@@ -31,7 +30,7 @@ type Node struct {
 	C      Content // content of node
 	Hex    string  // Hexidecimal representation of content hash
 	data   []byte  // raw data before hash (useful for debug)
-	proof  Signature
+	Proof  Signature
 }
 
 // create a new merkle tree and return the root node, merkleroot and leaf nodes.
@@ -51,7 +50,6 @@ func NewTree(cs []Content) (*MerkleTree, error) {
 			Hex:    hex.EncodeToString(hash),
 			C:      c,
 			isLeaf: true,
-			data:   c.Data(),
 		})
 	}
 
@@ -71,7 +69,7 @@ func NewTree(cs []Content) (*MerkleTree, error) {
 
 	t := &MerkleTree{
 		Root:       root,
-		merkleRoot: root.Hash,
+		MerkleRoot: root.Hash,
 		Leafs:      leafs,
 	}
 
@@ -137,7 +135,7 @@ type Signature struct {
 	Proof      []Proofpath `json:"proof"`
 }
 
-func (t *MerkleTree) generateProofs() {
+func (t *MerkleTree) GenerateProofs() {
 	for _, leaf := range t.Leafs {
 		leaf.generateProof()
 	}
@@ -157,7 +155,7 @@ func (n *Node) generateProof() {
 	signature.Proof = path
 	signature.MerkleRoot = root
 
-	n.proof = signature
+	n.Proof = signature
 }
 
 // rename plz

@@ -40,7 +40,7 @@ func TestNewTree(t *testing.T) {
 		t.Error("error: unexpected error:  ", err)
 	}
 
-	tree.generateProofs()
+	tree.GenerateProofs()
 
 	fmt.Println("--------------------------")
 	fmt.Println(VerifyProof(tree.Leafs[1].proof))
