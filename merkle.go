@@ -25,7 +25,7 @@ type Node struct {
 	Left   *Node   // left child pointer
 	Right  *Node   // right child pointer
 	isLeaf bool    // ifs node a leaf
-	dup    bool    // is node a duplicate
+	Dup    bool    // is node a duplicate
 	Hash   []byte  // hash of node content
 	C      Content // content of node
 	Hex    string  // Hexidecimal representation of content hash
@@ -59,7 +59,7 @@ func NewTree(cs []Content) (*MerkleTree, error) {
 			Hash:   leafs[len(leafs)-1].Hash,
 			C:      leafs[len(leafs)-1].C,
 			isLeaf: true,
-			dup:    true,
+			Dup:    true,
 			Hex:    leafs[len(leafs)-1].Hex,
 		}
 		leafs = append(leafs, duplicate)
@@ -118,7 +118,7 @@ func constructTree(nodes []*Node) *Node {
 
 type Anchor struct {
 	SourceID string `json:"sourceId"`
-	Type     string `json:"type"`
+	Chain    string `json:"chain"`
 }
 
 type Proofpath struct {
@@ -127,14 +127,13 @@ type Proofpath struct {
 }
 
 type Signature struct {
-	Context    []string    `json:"@context"`
-	Type       string      `json:"type"`
 	TargetHash string      `json:"targetHash"`
 	MerkleRoot string      `json:"merkleRoot"`
 	Anchors    []Anchor    `json:"anchors"`
 	Proof      []Proofpath `json:"proof"`
 }
 
+// GenerateProofs ...
 func (t *MerkleTree) GenerateProofs() {
 	for _, leaf := range t.Leafs {
 		leaf.generateProof()
@@ -143,10 +142,7 @@ func (t *MerkleTree) GenerateProofs() {
 
 func (n *Node) generateProof() {
 
-	var signature = Signature{
-		Context: []string{"http://schema.org/", "https://w3id.org/security/v1"},
-		Type:    "MerkleProof2017",
-	}
+	var signature = Signature{}
 
 	signature.TargetHash = hex.EncodeToString(n.Hash)
 
